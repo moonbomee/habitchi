@@ -4,6 +4,9 @@
 #include "Facts.h"
 #include "Pet.h"
 #include "Sprites.h"
+#include "SpritesWonsaki.h"
+#include "SpritesSaero.h"
+#include "SpritesDoguri.h"
 #include "DisplayGlyphs.h"
 #include "DisplayTexts.h"
 #include "PetConfig.h"
@@ -25,9 +28,7 @@ const uint8_t PET_Y = 13;
 const uint8_t EFFECT_X = 84;
 const uint8_t EFFECT_Y = 14;
 const uint8_t BOTTOM_TEXT_TOP = 49;
-const uint8_t BELLY_CENTER_Y = 25;
-const uint8_t BELLY_RADIUS_X = 14;
-const uint8_t BELLY_RADIUS_Y = 6;
+const unsigned long NIGHT_SNACK_INTRO_MS = 1500;
 
 const uint8_t PAGE_PET = 1;
 const uint8_t PAGE_STATS = 2;
@@ -47,6 +48,7 @@ struct Shown {
   uint8_t minute;
   bool demo;
   bool pc;
+  bool nightSnackIntro;
   PetView pet;
 };
 
@@ -58,6 +60,8 @@ unsigned long lastCheckMs = 0;
 uint8_t nextRowToSend = TILE_ROWS;
 bool forceRedraw = true;
 Shown shown;
+bool showingNightSnack = false;
+unsigned long nightSnackStartMs = 0;
 char line[48];
 
 void setText(const char* text) {
@@ -130,27 +134,53 @@ void drawTextRight(int right, int top, const char* text) {
   drawText(right - textWidth(text), top, text);
 }
 
-const uint8_t* spriteFor(Stage stage) {
-  switch (stage) {
-    case Stage::Egg: return SPRITE_EGG;
-    case Stage::Baby: return SPRITE_BABY;
-    case Stage::Child: return SPRITE_CHILD;
-    case Stage::Healthy: return SPRITE_HEALTHY;
-    case Stage::Weak: return SPRITE_WEAK;
-    case Stage::Obese: return SPRITE_OBESE;
-    case Stage::Dead: return SPRITE_TOMB;
+struct BodySprite {
+  const uint8_t* bitmap;
+  uint8_t faceY;
+};
+
+const BodySprite CHARACTER_BODIES[][5] PROGMEM = {
+  {
+    {SPRITE_WONSAKI_BABY, 14},
+    {SPRITE_WONSAKI_CHILD, 13},
+    {SPRITE_WONSAKI_HEALTHY, 13},
+    {SPRITE_WONSAKI_WEAK, 11},
+    {SPRITE_WONSAKI_OBESE, 13}
+  },
+  {
+    {SPRITE_SAERO_BABY, 17},
+    {SPRITE_SAERO_CHILD, 14},
+    {SPRITE_SAERO_HEALTHY, 15},
+    {SPRITE_SAERO_WEAK, 15},
+    {SPRITE_SAERO_OBESE, 18}
+  },
+  {
+    {SPRITE_DOGURI_BABY, DOGURI_FACE_Y_BABY},
+    {SPRITE_DOGURI_CHILD, DOGURI_FACE_Y_CHILD},
+    {SPRITE_DOGURI_HEALTHY, DOGURI_FACE_Y_HEALTHY},
+    {SPRITE_DOGURI_WEAK, DOGURI_FACE_Y_WEAK},
+    {SPRITE_DOGURI_OBESE, DOGURI_FACE_Y_OBESE}
   }
-  return SPRITE_EGG;
+};
+
+BodySprite bodyFor(const PetView& pet) {
+  if (pet.stage < Stage::Baby || pet.stage > Stage::Obese ||
+      pet.character < Character::Wonsaki || pet.character > Character::Doguri) {
+    return {SPRITE_EGG, 0};
+  }
+  uint8_t character = static_cast<uint8_t>(pet.character) - static_cast<uint8_t>(Character::Wonsaki);
+  uint8_t stage = static_cast<uint8_t>(pet.stage) - static_cast<uint8_t>(Stage::Baby);
+  BodySprite body;
+  memcpy_P(&body, &CHARACTER_BODIES[character][stage], sizeof(body));
+  return body;
 }
 
-uint8_t faceYFor(Stage stage) {
-  switch (stage) {
-    case Stage::Baby: return FACE_Y_BABY;
-    case Stage::Child: return FACE_Y_CHILD;
-    case Stage::Healthy: return FACE_Y_HEALTHY;
-    case Stage::Weak: return FACE_Y_WEAK;
-    case Stage::Obese: return FACE_Y_OBESE;
-    default: return 0;
+const char* characterName(Character character) {
+  switch (character) {
+    case Character::Wonsaki: return TXT_WONSAKI;
+    case Character::Saero: return TXT_SAERO;
+    case Character::Doguri: return TXT_DOGURI;
+    default: return TXT_STAGE_EGG;
   }
 }
 
@@ -168,7 +198,7 @@ Look lookFor(Mood mood) {
     case Mood::SoreEyes: return {FACE_SORE, nullptr, Motion::Bob};
     case Mood::Stretch: return {FACE_NORMAL, FX_EXCL, Motion::Jump};
     case Mood::Stomachache: return {FACE_PAIN, FX_SWEAT, Motion::Shiver};
-    case Mood::Indigestion: return {FACE_TIRED, FX_SWEAT, Motion::Still};
+    case Mood::Indigestion: return {FACE_PAIN, FX_SWEAT, Motion::Still};
     case Mood::Full: return {FACE_HAPPY, nullptr, Motion::Still};
     case Mood::Thirsty: return {FACE_OPEN, FX_DROP, Motion::Bob};
     case Mood::Cold: return {FACE_SAD, FX_SNOW, Motion::Shiver};
@@ -239,6 +269,10 @@ void buildBottomText(const PetView& pet) {
       addNumber(pet.generation);
       addText(TXT_NEW_GENERATION);
       return;
+    case Notice::Hatched:
+      setText(characterName(static_cast<Character>(pet.noticeValue)));
+      addText(TXT_HATCHED);
+      return;
     case Notice::None: break;
   }
   if (pet.stage == Stage::Dead) setText(TXT_MOOD_DEAD);
@@ -273,19 +307,18 @@ void drawTopBar(const Shown& s) {
   }
 }
 
-void drawBloatedBelly(int x, int y) {
-  int centerX = x + SPRITE_W / 2;
-  int centerY = y + BELLY_CENTER_Y;
+void drawNightSnack() {
+  oled.drawDisc(EFFECT_X + 5, EFFECT_Y + 5, 5);
   oled.setDrawColor(0);
-  oled.drawFilledEllipse(centerX, centerY, BELLY_RADIUS_X, BELLY_RADIUS_Y);
+  oled.drawDisc(EFFECT_X + 8, EFFECT_Y + 3, 5);
   oled.setDrawColor(1);
-  oled.drawEllipse(centerX, centerY, BELLY_RADIUS_X, BELLY_RADIUS_Y);
-  oled.drawPixel(centerX, centerY + 2);
+  oled.drawXBMP(EFFECT_X, EFFECT_Y + 14, FX_W, FX_H, FX_FOOD);
 }
 
 void drawPet(const Shown& s) {
   const PetView& pet = s.pet;
   Look look = lookFor(pet.mood);
+  if (s.nightSnackIntro) look = {FACE_OPEN, nullptr, Motion::Still};
   if (pet.stage == Stage::Dead) {
     oled.drawXBMP(PET_X, PET_Y, SPRITE_W, SPRITE_H, SPRITE_TOMB);
     return;
@@ -303,17 +336,16 @@ void drawPet(const Shown& s) {
     x += s.frame == 1 ? 1 : -1;
   }
 
-  oled.drawXBMP(x, y, SPRITE_W, SPRITE_H, spriteFor(pet.stage));
-
-  if (pet.mood == Mood::Indigestion && hasFace(pet.stage)) {
-    drawBloatedBelly(x, y);
-  }
+  BodySprite body = bodyFor(pet);
+  oled.drawXBMP(x, y, SPRITE_W, SPRITE_H, body.bitmap);
 
   if (hasFace(pet.stage)) {
     oled.setDrawColor(2);
-    oled.drawXBMP(x + FACE_X, y + faceYFor(pet.stage), FACE_W, FACE_H, look.face);
+    oled.drawXBMP(x + FACE_X, y + body.faceY, FACE_W, FACE_H, look.face);
     oled.setDrawColor(1);
   }
+
+  if (s.nightSnackIntro) drawNightSnack();
 
   if (look.effect != nullptr) {
     oled.drawXBMP(EFFECT_X, EFFECT_Y - s.frame * 2, FX_W, FX_H, look.effect);
@@ -323,7 +355,10 @@ void drawPet(const Shown& s) {
 void drawPetPage(const Shown& s) {
   drawTopBar(s);
   drawPet(s);
-  buildBottomText(s.pet);
+  if (s.pet.notice == Notice::Hatched) buildBottomText(s.pet);
+  else if (s.nightSnackIntro) setText(TXT_NIGHT_SNACK);
+  else if (s.pet.mood == Mood::Indigestion) setText(TXT_MOOD_INDIGESTION);
+  else buildBottomText(s.pet);
   drawTextCentered(BOTTOM_TEXT_TOP, line);
 }
 
@@ -349,9 +384,13 @@ void drawStatsPage(const Shown& s) {
   addText(TXT_GENERATION_UNIT);
   drawTextRight(SCREEN_W, 0, line);
 
-  setText(TXT_EXP);
+  if (pet.character != Character::Unhatched) {
+    setText(characterName(pet.character));
+    drawText(0, 16, line);
+  }
+  setText(TXT_EXP_SHORT);
   addNumber(pet.exp);
-  drawText(0, 16, line);
+  drawTextRight(SCREEN_W, 16, line);
 
   drawStat(0, 48, pet.fullness, TXT_FULLNESS);
   drawStat(56, 32, pet.rest, TXT_REST);
@@ -369,6 +408,11 @@ Shown readState() {
   s.demo = GameClock::demoMode();
   s.pc = facts.pcConnected;
   s.pet = Pet::view();
+  bool nightSnack = s.pet.mood == Mood::Indigestion && hasFace(s.pet.stage);
+  if (nightSnack && !showingNightSnack) nightSnackStartMs = now;
+  showingNightSnack = nightSnack;
+  s.nightSnackIntro = page == PAGE_PET && nightSnack &&
+                      now - nightSnackStartMs < NIGHT_SNACK_INTRO_MS;
   return s;
 }
 

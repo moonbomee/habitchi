@@ -22,7 +22,8 @@ const char TXT_MOOD_SLEEPING[] PROGMEM = "자는 중";
 const char TXT_MOOD_SORE_EYES[] PROGMEM = "눈이 아파";
 const char TXT_MOOD_STRETCH[] PROGMEM = "스트레칭!";
 const char TXT_MOOD_STOMACHACHE[] PROGMEM = "배 아파..";
-const char TXT_MOOD_INDIGESTION[] PROGMEM = "야식 배불러..";
+const char TXT_NIGHT_SNACK[] PROGMEM = "야식";
+const char TXT_MOOD_INDIGESTION[] PROGMEM = "속이 아파";
 const char TXT_MOOD_FULL[] PROGMEM = "배불러";
 const char TXT_MOOD_THIRSTY[] PROGMEM = "목말라";
 const char TXT_MOOD_COLD[] PROGMEM = "으, 추워";
@@ -42,7 +43,13 @@ const char TXT_STAGE_DEAD[] PROGMEM = "하늘나라";
 const char TXT_FULLNESS[] PROGMEM = "포만감";
 const char TXT_REST[] PROGMEM = "수면";
 const char TXT_STAMINA[] PROGMEM = "체력";
-const char TXT_EXP[] PROGMEM = "경험치 ";
 const char TXT_GENERATION_UNIT[] PROGMEM = "세대";
 
 const char TXT_DEMO_BADGE[] PROGMEM = "DEMO";
+
+
+const char TXT_WONSAKI[] PROGMEM = "원사기";
+const char TXT_SAERO[] PROGMEM = "새로";
+const char TXT_DOGURI[] PROGMEM = "도구리";
+const char TXT_HATCHED[] PROGMEM = " 부화!";
+const char TXT_EXP_SHORT[] PROGMEM = "EXP ";

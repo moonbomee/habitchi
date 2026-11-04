@@ -22,6 +22,10 @@ bool load() {
   if (block.version != PetCfg::SAVE_VERSION) return false;
   if (block.data.stage > Stage::Dead) return false;
   if (block.data.generation == 0) return false;
+  if (block.data.character > Character::Doguri) return false;
+  if (block.data.stage == Stage::Egg && block.data.character != Character::Unhatched) return false;
+  if (block.data.stage != Stage::Egg && block.data.stage != Stage::Dead &&
+      block.data.character == Character::Unhatched) return false;
   pet = block.data;
   return true;
 }

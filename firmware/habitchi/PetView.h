@@ -3,6 +3,8 @@
 
 enum class Stage : uint8_t { Egg, Baby, Child, Healthy, Weak, Obese, Dead };
 
+enum class Character : uint8_t { Unhatched, Wonsaki, Saero, Doguri };
+
 enum class Mood : uint8_t {
   Normal,
   Happy,
@@ -33,11 +35,13 @@ enum class Notice : uint8_t {
   PhoneDown,
   ExerciseResult,
   MeasureAgain,
-  NewGeneration
+  NewGeneration,
+  Hatched
 };
 
 struct PetView {
   Stage stage;
+  Character character;
   Mood mood;
   Notice notice;
   uint8_t fullness;

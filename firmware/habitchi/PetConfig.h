@@ -92,7 +92,7 @@ constexpr unsigned long NOTICE_MS = 4000;
 
 constexpr int SAVE_ADDRESS = 0;
 constexpr uint16_t SAVE_MAGIC = 0x4842;
-constexpr uint8_t SAVE_VERSION = 2;
+constexpr uint8_t SAVE_VERSION = 3;
 constexpr Timing SAVE_EVERY{10UL * 60UL * 1000UL, 60UL * 1000UL};
 constexpr uint32_t NIGHT_MAX_AGE_SECONDS = 16UL * 60UL * 60UL;
 }

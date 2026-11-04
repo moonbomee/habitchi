@@ -34,6 +34,7 @@ struct PetSave {
   bool nightCold;
   bool nightGlow;
   bool phoneMode;
+  Character character;
 };
 
 extern PetSave pet;

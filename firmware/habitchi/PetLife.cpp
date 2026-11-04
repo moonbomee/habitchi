@@ -4,6 +4,7 @@
 #include "Storage.h"
 #include "PcLink.h"
 #include "Sound.h"
+#include "GameClock.h"
 
 namespace PetLife {
 namespace {
@@ -14,6 +15,10 @@ constexpr uint8_t CAUSE_OVERWORK = 4;
 constexpr uint16_t MINUTES_PER_DAY = 24 * 60;
 
 unsigned long tombStartMs = 0;
+
+Character drawCharacter() {
+  return static_cast<Character>(static_cast<uint8_t>(Character::Wonsaki) + random(3));
+}
 
 uint16_t countZero(uint16_t stat, uint16_t minutes) {
   if (stat != 0) return 0;
@@ -45,6 +50,7 @@ void checkGrowth() {
 }
 
 void setup() {
+  randomSeed((GameClock::now() ^ micros()) | 1UL);
   tombStartMs = millis();
 }
 
@@ -79,6 +85,8 @@ void minuteTick() {
 }
 
 void setStage(Stage stage) {
+  if (stage == Stage::Egg) pet.character = Character::Unhatched;
+  else if (pet.character == Character::Unhatched) pet.character = drawCharacter();
   pet.stage = stage;
   pet.stageMinutes = 0;
   Storage::requestSave();
@@ -87,6 +95,7 @@ void setStage(Stage stage) {
 void hatchIfEgg() {
   if (pet.stage != Stage::Egg) return;
   setStage(Stage::Baby);
+  PetCore::notify(Notice::Hatched, static_cast<int16_t>(pet.character));
   Sound::play(SoundId::Hatch);
 }
 

@@ -100,6 +100,7 @@ Mood chooseMood() {
 
 void buildView() {
   current.stage = pet.stage;
+  current.character = pet.character;
   current.mood = chooseMood();
   current.notice = PetCore::currentNotice();
   current.noticeValue = PetCore::currentNoticeValue();
