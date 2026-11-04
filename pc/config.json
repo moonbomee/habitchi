@@ -1,0 +1,13 @@
+{
+  "baud": 115200,
+  "reset_wait_s": 2,
+  "ping_interval_s": 10,
+  "typing_interval_s": 1,
+  "commit_queue": "~/.habitchi/commits.jsonl",
+  "min_message_length": 6,
+  "junk_words": [
+    "fix", "fixed", "fixes", "update", "updated", "wip", "test", "tmp",
+    "asdf", "qwer", "aaa", "수정", "커밋", "ㅁㄴㅇㄹ", "ㅇㅇ", "."
+  ],
+  "dashboard_temp_divisor": 10
+}

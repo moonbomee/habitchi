@@ -1,0 +1,54 @@
+#!/bin/sh
+
+LIMIT=30
+QUEUE_DIR="$HOME/.habitchi"
+QUEUE="$QUEUE_DIR/commits.jsonl"
+
+export LC_ALL=C
+
+GIT_DIR_PATH=$(git rev-parse --git-dir)
+if [ -d "$GIT_DIR_PATH/rebase-merge" ] || [ -d "$GIT_DIR_PATH/rebase-apply" ]; then
+  exit 0
+fi
+
+ROOT=$(git rev-parse --show-toplevel)
+REPO=$(basename "$ROOT")
+MESSAGE=$(git log -1 --pretty=%B)
+TESTS=none
+
+if [ -f "$ROOT/.habitchi-test" ]; then
+  CMD=$(head -n 1 "$ROOT/.habitchi-test")
+  if [ -n "$CMD" ]; then
+    echo "habitchi: running tests ($CMD), up to $LIMIT s"
+    {
+      set -m
+      ( cd "$ROOT" && exec sh -c "$CMD" ) > /dev/null 2>&1 &
+      TEST_PID=$!
+      ( sleep "$LIMIT"; kill -TERM -"$TEST_PID" ) > /dev/null 2>&1 &
+      WATCH_PID=$!
+      set +m
+      if wait "$TEST_PID"; then
+        TESTS=pass
+      else
+        TESTS=fail
+      fi
+      kill -TERM -"$WATCH_PID"
+      wait "$WATCH_PID"
+    } 2> /dev/null
+    echo "habitchi: tests $TESTS"
+  fi
+fi
+
+json_text() {
+  printf '%s' "$1" \
+    | tr -d '\000-\010\013-\037' \
+    | tr '\011' ' ' \
+    | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' \
+    | awk 'NR > 1 { printf "\\n" } { printf "%s", $0 }'
+}
+
+mkdir -p "$QUEUE_DIR"
+printf '{"time":%s,"repo":"%s","message":"%s","tests":"%s"}\n' \
+  "$(date +%s)" "$(json_text "$REPO")" "$(json_text "$MESSAGE")" "$TESTS" >> "$QUEUE"
+
+exit 0
