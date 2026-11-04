@@ -11,6 +11,29 @@ OLED 화면에 펫을 그리고, 피에조로 효과음을 내는 부분이에�
 | `firmware/habitchi/Sound.cpp` | 효과음 10가지를 `loop()`를 막지 않고 재생해요 |
 | `firmware/tests/oled_sound/` | 화면과 스피커만 따로 확인하는 시험 스케치 |
 
+## 0. 화면 미리보기
+> 실제 OLED가 아니라 PC에서 같은 코드로 그려 본 그림이에요. 캐릭터는 **임시 그림**이고, 팀이 그린 그림으로 바꿀 거예요 (6장 참고).
+
+**성장 단계 그림 (`Sprites.h`, 32×32)**
+
+![성장 단계 그림](images/sprites.png)
+
+**기분별 화면 (1쪽)**
+
+![기분별 화면](images/screen_moods.png)
+
+**알림 문구 (1쪽 아래 줄)**: 미리보기를 만든 뒤에 운동 결과는 "심박 +N"으로, 측정 실패 알림 "다시 재 줘"가 추가됐어요.
+
+![알림 화면](images/screen_notices.png)
+
+**상태 화면 (2쪽)과 묘비**
+
+![상태 화면](images/screen_stats.png)
+
+**야식 커밋 (배 볼록)**
+
+![배 볼록](images/screen_belly.png)
+
 ## 1. 배선
 
 ### OLED (0.96" SSD1306, I2C)
